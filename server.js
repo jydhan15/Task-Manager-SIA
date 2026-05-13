@@ -25,17 +25,9 @@ app.get('/', (req, res) => {
   res.json({ message: 'Task Manager API is running!' });
 });
 
-// GET all categories (Feature #19 — fetch from API)
-app.get('/api/categories', (req, res) => {
-  try {
-    const data = readData();
-    res.json(data.categories);
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to load categories' });
-  }
-});
-
-// GET all tasks
+// ============================================================
+// GET — Read all tasks
+// ============================================================
 app.get('/api/tasks', (req, res) => {
   try {
     const data = readData();
@@ -45,7 +37,19 @@ app.get('/api/tasks', (req, res) => {
   }
 });
 
-// POST create a task (Feature #1)
+// GET — Read all categories (Feature #19)
+app.get('/api/categories', (req, res) => {
+  try {
+    const data = readData();
+    res.json(data.categories);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to load categories' });
+  }
+});
+
+// ============================================================
+// POST — Create a new task (Feature #1)
+// ============================================================
 app.post('/api/tasks', (req, res) => {
   try {
     const { title, category } = req.body;
@@ -67,8 +71,10 @@ app.post('/api/tasks', (req, res) => {
   }
 });
 
-// PATCH toggle complete — MUST be before /api/tasks/:id (Feature #3)
-app.patch('/api/tasks/:id/toggle', (req, res) => {
+// ============================================================
+// PUT — Toggle complete — MUST be before /api/tasks/:id (Feature #3)
+// ============================================================
+app.put('/api/tasks/:id/toggle', (req, res) => {
   try {
     const data = readData();
     const task = data.tasks.find((t) => t.id === Number(req.params.id));
@@ -82,23 +88,35 @@ app.patch('/api/tasks/:id/toggle', (req, res) => {
   }
 });
 
-// PATCH edit task title/category (Feature #9)
-app.patch('/api/tasks/:id', (req, res) => {
+// PUT — Fully update a task (Feature #9)
+app.put('/api/tasks/:id', (req, res) => {
   try {
-    const data = readData();
-    const task = data.tasks.find((t) => t.id === Number(req.params.id));
-    if (!task) return res.status(404).json({ error: 'Task not found' });
+    const { title, category, completed } = req.body;
+    if (!title) return res.status(400).json({ error: 'Title is required' });
 
-    if (req.body.title) task.title = req.body.title;
-    if (req.body.category) task.category = req.body.category;
+    const data = readData();
+    const index = data.tasks.findIndex((t) => t.id === Number(req.params.id));
+    if (index === -1) return res.status(404).json({ error: 'Task not found' });
+
+    data.tasks[index] = {
+      id: Number(req.params.id),
+      title,
+      category: category || 'Personal',
+      completed: completed ?? data.tasks[index].completed,
+      createdAt: data.tasks[index].createdAt,
+      updatedAt: new Date().toISOString(),
+    };
+
     writeData(data);
-    res.json(task);
+    res.json(data.tasks[index]);
   } catch (err) {
     res.status(500).json({ error: 'Failed to update task' });
   }
 });
 
-// DELETE a task (Feature #2)
+// ============================================================
+// DELETE — Remove a task (Feature #2)
+// ============================================================
 app.delete('/api/tasks/:id', (req, res) => {
   try {
     const data = readData();
